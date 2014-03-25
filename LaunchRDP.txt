@@ -1,0 +1,1 @@
+LaunchRDP.exe 10.224.168.16 3389 cisco Cisco P@ssword123 0 0 0
