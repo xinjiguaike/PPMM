@@ -1,0 +1,34 @@
+<?xml version="1.0"?><PPMM>
+<Desktop ConnectionName="XP_15">
+<PCName>10.224.168.15</PCName>
+<Domain>VDI-80-XP</Domain>
+<UserName>cisco</UserName>
+<Password>P@ssword123</Password>
+<Available>N</Available>
+<Owner>Rudy Xiong</Owner>
+</Desktop>
+<Desktop ConnectionName="Win7_16">
+<PCName>10.224.168.16</PCName>
+<Domain>Cisco</Domain>
+<UserName>cisco</UserName>
+<Password>P@ssword123</Password>
+<Available>Y</Available>
+<Owner/>
+</Desktop>
+<Desktop ConnectionName="Win7_56">
+<PCName>10.224.168.56</PCName>
+<Domain>Cisco</Domain>
+<UserName>pso</UserName>
+<Password>pass</Password>
+<Available>Y</Available>
+<Owner/>
+</Desktop>
+<Desktop ConnectionName="XP_18">
+<PCName>10.224.168.18</PCName>
+<Domain>Cisco</Domain>
+<UserName>cisco</UserName>
+<Password>pass</Password>
+<Available>Y</Available>
+<Owner/>
+</Desktop>
+</PPMM>

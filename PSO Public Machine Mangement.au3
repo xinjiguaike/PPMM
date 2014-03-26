@@ -1,9 +1,9 @@
 ﻿#cs ----------------------------------------------------------------------------
 
- AutoIt Version: 3.3.10.2
- Author:         Rudy
+	AutoIt Version: 3.3.10.2
+	Author:         Rudy
 
- Script Function:
+	Script Function:
 	Manage PSO public machines.
 
 #ce ----------------------------------------------------------------------------
@@ -17,25 +17,27 @@
 #include <Excel.au3>
 #include <File.au3>
 #include <Array.au3>
+#include <_XMLDomWrapper_.au3>
 
 #cs
-Global Const $REMOTE_CONNECT_TITLE_CH = "远程桌面连接"
-Global Const $SECURITY_WARNING_TITLE_CH = "Windows 安全"
-Global Const $CONFIRM_CONNECT_TITLE_CH = "[TITLE:远程桌面连接;CLASS:#32770;INSTANCE:1]"
-Global Const $INPUT_COMPUTER_TITLE = "[CLASS:ComboBoxEx32;ID:5012]"
-Global Const $BUTTON_CONNECT_TITLE = "[CLASS:Button;ID:1]"
-Global Const $DISPLAY_OPTIONS_TITLE = "[CLASS:ToolbarWindow32;ID:5017]"
-Global Const $IN_INPUT_COMPUTER_TITLE = "[CLASS:ComboBoxEx32;INSTANCE:1]"
-Global Const $IN_INPUT_USERNAME_TITLE = "[CLASS:Edit;ID:13064]"
-Global Const $EDIT_PASSWORD_TITLE = "[CLASS:Edit;INSTANCE:1]"
-Global Const $BUTTON_CONFIRM_TITLE = "[CLASS:Button;INSTANCE:2]"
-Global Const $BUTTON_YES_TITLE = "[CLASS:Button;ID:14004]"
+	Global Const $REMOTE_CONNECT_TITLE_CH = "远程桌面连接"
+	Global Const $SECURITY_WARNING_TITLE_CH = "Windows 安全"
+	Global Const $CONFIRM_CONNECT_TITLE_CH = "[TITLE:远程桌面连接;CLASS:#32770;INSTANCE:1]"
+	Global Const $INPUT_COMPUTER_TITLE = "[CLASS:ComboBoxEx32;ID:5012]"
+	Global Const $BUTTON_CONNECT_TITLE = "[CLASS:Button;ID:1]"
+	Global Const $DISPLAY_OPTIONS_TITLE = "[CLASS:ToolbarWindow32;ID:5017]"
+	Global Const $IN_INPUT_COMPUTER_TITLE = "[CLASS:ComboBoxEx32;INSTANCE:1]"
+	Global Const $IN_INPUT_USERNAME_TITLE = "[CLASS:Edit;ID:13064]"
+	Global Const $EDIT_PASSWORD_TITLE = "[CLASS:Edit;INSTANCE:1]"
+	Global Const $BUTTON_CONFIRM_TITLE = "[CLASS:Button;INSTANCE:2]"
+	Global Const $BUTTON_YES_TITLE = "[CLASS:Button;ID:14004]"
 #ce
+
 Global Const $PPMM_TITLE = "PSO Public Machines Management"
 Global Const $PPMM_PATH = "\\pso.hz.webex.com\PSO_Share\DOC_Center\Individual\PPMM"
 Global Const $LAUNCH_RDP_PATH = @ScriptDir & "\LaunchRDP.exe"
 Global Const $PPMM_FILE_PATH = @ScriptDir & "\PSOPublicMachines.xlsx"
-Global Const $LAUNCH_RDP_TITLE = "LaunchRDP"
+Global Const $LAUNCH_RDP_PREFIX_TITLE = "LaunchRDP - "
 
 Global $g_aPCName[0]
 Global $g_aDomain[0]
@@ -45,6 +47,27 @@ Global $g_aPassword[0]
 Global $g_bPPMMExcelOpened = False
 Global $g_strLogPath = @ScriptDir & "\PPMM.log"
 Global $g_nCurSelectedIndex = -1
+
+Global $g_strXMLPath = @ScriptDir & "\PPMM.xml"
+
+;AddNewDesktop($g_strXMLPath, "XP_18", "10.224.168.18", "Cisco", "cisco", "pass")
+;_XMLFileOpen($g_strXMLPath)
+;Local $nCount = _XMLGetAttrib("/PPMM/Desktop[3]", "ConnectionName")
+;_ArrayDisplay($nCount)
+;ConsoleWrite('@@ Debug(' & @ScriptLineNumber & ') : $nCount = ' & $nCount & @crlf & '>Error code: ' & @error & @crlf) ;### Debug Console
+;Exit
+
+Func AddNewDesktop($strFilePath, $strConnectionName, $strPCName, $strDomain, $strUserName, $strPassword)
+	_XMLFileOpen($strFilePath)
+	_XMLCreateRootNodeWAttr("Desktop", "ConnectionName", $strConnectionName)
+	_XMLCreateChildNode("/PPMM/Desktop[@ConnectionName='" & $strConnectionName & "']", "PCName", $strPCName)
+	_XMLCreateChildNode("/PPMM/Desktop[@ConnectionName='" & $strConnectionName & "']", "Domain", $strDomain)
+	_XMLCreateChildNode("/PPMM/Desktop[@ConnectionName='" & $strConnectionName & "']", "UserName", $strUserName)
+	_XMLCreateChildNode("/PPMM/Desktop[@ConnectionName='" & $strConnectionName & "']", "Password", $strPassword)
+	_XMLCreateChildNode("/PPMM/Desktop[@ConnectionName='" & $strConnectionName & "']", "Available", "Y")
+	_XMLCreateChildNode("/PPMM/Desktop[@ConnectionName='" & $strConnectionName & "']", "Owner", "")
+EndFunc
+
 
 Local $hGUI = GUICreate($PPMM_TITLE, 400, 450, 400, 180)
 #Region================= Layer 1 ============================================
@@ -57,12 +80,12 @@ GUICtrlSetState($btnDeleteConnection, $GUI_DISABLE)
 
 Local $listviewConnections = GUICtrlCreateListView("", 50, 80, 300, 250)
 GUICtrlSetBkColor($listviewConnections, 0xffffee)
-Local $hImage = _GUIImageList_Create(16,32)
+Local $hImage = _GUIImageList_Create(16, 32)
 _GUIImageList_Add($hImage, _GUICtrlListView_CreateSolidBitMap(GUICtrlGetHandle($listviewConnections), 0xFF0000, 16, 32)); 0 for red
 _GUIImageList_Add($hImage, _GUICtrlListView_CreateSolidBitMap(GUICtrlGetHandle($listviewConnections), 0x00FF00, 16, 32)); 1 for green
 _GUICtrlListView_SetImageList($listviewConnections, $hImage, 1)
 _GUICtrlListView_AddColumn($listviewConnections, "Machines", 150)
-_GUICtrlListView_AddColumn($listviewConnections, "Owner", 150)
+_GUICtrlListView_AddColumn($listviewConnections, "Owner", 145)
 
 Local $lableYourName = GUICtrlCreateLabel("Your Name:", 110, 350, 60, 23)
 Local $inputYourName = GUICtrlCreateInput("", 175, 347, 100, 20)
@@ -73,6 +96,8 @@ GUICtrlSetState($btnStartConnection, $GUI_DISABLE)
 GUISetOnEvent($GUI_EVENT_CLOSE, "OnEventClose")
 GUICtrlSetOnEvent($btnNewConnection, "OnBtnNewClicked")
 GUICtrlSetOnEvent($btnEditConnection, "OnBtnEditClicked")
+GUICtrlSetOnEvent($btnDeleteConnection, "OnBtnDeleteClicked")
+GUICtrlSetOnEvent($btnRefreshConnection, "OnBtnRefreshClicked")
 GUICtrlSetOnEvent($btnStartConnection, "OnBtnStartConnectionClicked")
 #EndRegion
 
@@ -126,7 +151,7 @@ Func SetLayer1State($nState)
 	GUICtrlSetState($btnStartConnection, $nState)
 	GUICtrlSetState($lableYourName, $nState)
 	GUICtrlSetState($inputYourName, $nState)
-EndFunc
+EndFunc   ;==>SetLayer1State
 
 Func SetLayer2State($nState, $strType = "All")
 	GUICtrlSetState($lableEditRemoteDesktop, $nState)
@@ -143,37 +168,57 @@ Func SetLayer2State($nState, $strType = "All")
 	GUICtrlSetState($btnCancel, $nState)
 	If $strType == "New" Then
 		GUICtrlSetState($btnSaveNew, $nState)
-	Elseif $strType == "Edit" Then
+	ElseIf $strType == "Edit" Then
 		GUICtrlSetState($btnSaveEdit, $nState)
 	Else
 		GUICtrlSetState($btnSaveNew, $nState)
 		GUICtrlSetState($btnSaveEdit, $nState)
 	EndIf
-EndFunc
+EndFunc   ;==>SetLayer2State
 
 Func OnEventClose()
 	GUIDelete($hGUI)
 	Exit
-EndFunc
+EndFunc   ;==>OnEventClose
 
 Func OnBtnNewClicked()
 	SetLayer1State($GUI_HIDE)
+	GUICtrlSetData($inputConnectionName, "")
+	GUICtrlSetData($inputPCName, "")
+	GUICtrlSetData($inputDomain, "")
+	GUICtrlSetData($inputUserName, "")
+	GUICtrlSetData($inputPassword, "")
 	SetLayer2State($GUI_SHOW, "New")
-EndFunc
+EndFunc   ;==>OnBtnNewClicked
 
 Func OnBtnEditClicked()
 	SetLayer1State($GUI_HIDE)
+	Local $strConnectionName = _GUICtrlListView_GetItemText($listviewConnections, $g_nCurSelectedIndex)
+	GUICtrlSetData($inputConnectionName, $strConnectionName)
+	GUICtrlSetData($inputPCName, $g_aPCName[$g_nCurSelectedIndex])
+	GUICtrlSetData($inputDomain, $g_aDomain[$g_nCurSelectedIndex])
+	GUICtrlSetData($inputUserName, $g_aUserName[$g_nCurSelectedIndex])
+	GUICtrlSetData($inputPassword, $g_aPassword[$g_nCurSelectedIndex])
+
 	SetLayer2State($GUI_SHOW, "Edit")
-EndFunc
+EndFunc   ;==>OnBtnEditClicked
+
+Func OnBtnDeleteClicked()
+	_GUICtrlListView_DeleteItemsSelected($listviewConnections)
+EndFunc   ;==>OnBtnDeleteClicked
+
+Func OnBtnRefreshClicked()
+	SyncFromServer($PPMM_FILE_PATH)
+EndFunc   ;==>OnBtnRefreshClicked
 
 Func OnBtnStartConnectionClicked()
 	ConnectRemoteComputer($g_nCurSelectedIndex)
-EndFunc
+EndFunc   ;==>OnBtnStartConnectionClicked
 
 Func OnBtnCancelClicked()
 	SetLayer1State($GUI_SHOW)
 	SetLayer2State($GUI_HIDE)
-EndFunc
+EndFunc   ;==>OnBtnCancelClicked
 
 Func OnBtnSaveClicked()
 	If @GUI_CtrlId = $btnSaveNew Then
@@ -181,7 +226,7 @@ Func OnBtnSaveClicked()
 	ElseIf @GUI_CtrlId = $btnSaveEdit Then
 		ConsoleWrite("Save Edit." & @CR)
 	EndIf
-EndFunc
+EndFunc   ;==>OnBtnSaveClicked
 
 Func SyncFromServer($strFilePath)
 	_GUICtrlListView_DeleteAllItems($listviewConnections);Before Syncing, clear all
@@ -190,54 +235,43 @@ Func SyncFromServer($strFilePath)
 	;Clear all Array
 
 	;==========================================
-	Local $oExcel = _ExcelBookOpen($strFilePath, 0)
-	If $oExcel = 0 Then
-		_FileWriteLog($g_strLogPath, "【Error】打开PPMM文件失败")
-	Else
-		_FileWriteLog($g_strLogPath, "打开PPMM文件成功")
-		$g_bPPMMExcelOpened = True
-	EndIf
-
-	Local $nRow = 2
-	Local $aMachineInfo = _ExcelReadArray($oExcel, $nRow, 1, 7)
+	_XMLFileOpen($g_strXMLPath)
+	Local $nDesktopCount = _XMLGetNodeCount("/PPMM/Desktop")
 	Local $bGray = True
-	Local $itemListView
 
-	While $aMachineInfo[0]
+	For $i = 1 To $nDesktopCount Step 1
+		Local $strConnectionName = _XMLGetAttrib("/PPMM/Desktop[" & $i & "]", "ConnectionName")
+		Local $strOwner = _XMLGetValue("/PPMM/Desktop[" & $i & "]/Owner")[1]
+		Local $strAvailable = _XMLGetValue("/PPMM/Desktop[" & $i & "]/Available")[1]
+		Local $strPCName = _XMLGetValue("/PPMM/Desktop[" & $i & "]/PCName")[1]
+		Local $strDomain = _XMLGetValue("/PPMM/Desktop[" & $i & "]/Domain")[1]
+		Local $strUserName = _XMLGetValue("/PPMM/Desktop[" & $i & "]/UserName")[1]
+		Local $strPassword = _XMLGetValue("/PPMM/Desktop[" & $i & "]/Password")[1]
+
 		$itemListView = GUICtrlCreateListViewItem("", $listviewConnections)
-		If $aMachineInfo[5] == "N" Then
-			_GUICtrlListView_AddSubItem($listviewConnections, $nRow-2, $aMachineInfo[0], 0, 0)
-			_GUICtrlListView_AddSubItem($listviewConnections, $nRow-2, $aMachineInfo[6], 1)
+		If $strAvailable == "N" Then
+			_GUICtrlListView_AddSubItem($listviewConnections, $i-1, $strConnectionName, 0, 0)
+			_GUICtrlListView_AddSubItem($listviewConnections, $i-1, $strOwner, 1)
 		Else
-			_GUICtrlListView_AddSubItem($listviewConnections, $nRow-2, $aMachineInfo[0], 0, 1)
+			_GUICtrlListView_AddSubItem($listviewConnections, $i-1, $strConnectionName, 0, 1)
 		EndIf
 		$bGray = Not $bGray
-		If $bGray Then	GUICtrlSetBkColor($itemListView, 0xF3F3F3)
+		If $bGray Then GUICtrlSetBkColor($itemListView, 0xE9F0FE)
 
-		_ArrayAdd($g_aPCName, $aMachineInfo[1])
-		_ArrayAdd($g_aDomain, $aMachineInfo[2])
-		_ArrayAdd($g_aUserName, $aMachineInfo[3])
-		_ArrayAdd($g_aPassword, $aMachineInfo[4])
+		_ArrayAdd($g_aPCName, $strPCName)
+		_ArrayAdd($g_aDomain, $strDomain)
+		_ArrayAdd($g_aUserName, $strUserName)
+		_ArrayAdd($g_aPassword, $strPassword)
+	Next
+EndFunc   ;==>SyncFromServer
 
-		$nRow += 1
-		$aMachineInfo = _ExcelReadArray($oExcel, $nRow, 1, 7)
-	WEnd
-
-	If _ExcelBookClose($oExcel) Then
-		$g_bPPMMExcelOpened = False
-		_FileWriteLog($g_strLogPath, "关闭PPMM文件成功")
-	Else
-		_FileWriteLog($g_strLogPath, "【Error】关闭PPMM文件失败")
-	EndIf
-EndFunc
-
-Func SyncToServer()
-
-EndFunc
+Func SyncToServer($nIndex)
+	Return 0
+EndFunc   ;==>SyncToServer
 
 Func AddNewMachine()
 
-EndFunc
+EndFunc   ;==>AddNewMachine
 
 
 Func ConnectRemoteComputer($nIndex)
@@ -254,34 +288,37 @@ Func ConnectRemoteComputer($nIndex)
 	EndIf
 
 	Local $strCMDLine = $LAUNCH_RDP_PATH & " " & $g_aPCName[$nIndex] & " 3389 " & $g_aUserName[$nIndex] & " " & $g_aDomain[$nIndex] & " " & $g_aPassword[$nIndex] & " 0 0 0"
-	ConsoleWrite($strCMDLine & @CR)
-	#cs
+	;ConsoleWrite($strCMDLine & @CR)
 	Run($strCMDLine)
-	Local $hwndLaunchRDP = WinWait($LAUNCH_RDP_TITLE, "", 60)
-	If $hwndLaunchRDP = 0 Then	Return 0
+	Local $strRemoteConnectionTitle = $LAUNCH_RDP_PREFIX_TITLE & $g_aPCName[$nIndex]
+	Local $hwndLaunchRDP = WinWait($strRemoteConnectionTitle, "", 30)
+	If $hwndLaunchRDP = 0 Then Return 0
+
+	_GUICtrlListView_SetItemImage($listviewConnections, $nIndex, 0)
+	_GUICtrlListView_AddSubItem($listviewConnections, $nIndex, $strYourName, 1)
 
 	SyncToServer($nIndex)
 
 	Return 1
-	#ce
-EndFunc
+
+EndFunc   ;==>ConnectRemoteComputer
 
 Func WM_NOTIFY($hWnd, $iMsg, $iwParam, $ilParam)
-    #forceref $hWnd, $iMsg, $iwParam
-    Local $hWndFrom, $iCode, $tNMHDR, $hWndListView, $tInfo
-    $hWndListView = $listviewConnections
-    If Not IsHWnd($listviewConnections) Then $hWndListView = GUICtrlGetHandle($listviewConnections)
+	#forceref $hWnd, $iMsg, $iwParam
+	Local $hWndFrom, $iCode, $tNMHDR, $hWndListView, $tInfo
+	$hWndListView = $listviewConnections
+	If Not IsHWnd($listviewConnections) Then $hWndListView = GUICtrlGetHandle($listviewConnections)
 
-    $tNMHDR = DllStructCreate($tagNMHDR, $ilParam)
-    $hWndFrom = HWnd(DllStructGetData($tNMHDR, "hWndFrom"))
-    $iCode = DllStructGetData($tNMHDR, "Code")
-    Switch $hWndFrom
-        Case $hWndListView
-            Switch $iCode
-                Case $NM_CLICK ; Sent by a list-view control when the user clicks an item with the left mouse button
-                    $tInfo = DllStructCreate($tagNMITEMACTIVATE, $ilParam)
+	$tNMHDR = DllStructCreate($tagNMHDR, $ilParam)
+	$hWndFrom = HWnd(DllStructGetData($tNMHDR, "hWndFrom"))
+	$iCode = DllStructGetData($tNMHDR, "Code")
+	Switch $hWndFrom
+		Case $hWndListView
+			Switch $iCode
+				Case $NM_CLICK ; Sent by a list-view control when the user clicks an item with the left mouse button
+					$tInfo = DllStructCreate($tagNMITEMACTIVATE, $ilParam)
 					$g_nCurSelectedIndex = DllStructGetData($tInfo, "Index")
-					If $g_nCurSelectedIndex = -1  Then
+					If $g_nCurSelectedIndex = -1 Then
 						GUICtrlSetState($btnStartConnection, $GUI_DISABLE)
 						GUICtrlSetState($btnEditConnection, $GUI_DISABLE)
 						GUICtrlSetState($btnDeleteConnection, $GUI_DISABLE)
@@ -291,20 +328,20 @@ Func WM_NOTIFY($hWnd, $iMsg, $iwParam, $ilParam)
 						GUICtrlSetState($btnDeleteConnection, $GUI_ENABLE)
 					EndIf
 					Return 0
-                Case $NM_DBLCLK ; Sent by a list-view control when the user clicks an item with the right mouse button
-                    $tInfo = DllStructCreate($tagNMITEMACTIVATE, $ilParam)
+				Case $NM_DBLCLK ; Sent by a list-view control when the user clicks an item with the right mouse button
+					$tInfo = DllStructCreate($tagNMITEMACTIVATE, $ilParam)
 					$g_nCurSelectedIndex = DllStructGetData($tInfo, "Index")
 					ConnectRemoteComputer($g_nCurSelectedIndex)
-                    Return 0 ; allow the default processing
+					Return 0 ; allow the default processing
 				Case $LVN_KEYDOWN
 					$tInfo = DllStructCreate($tagNMITEMACTIVATE, $ilParam)
 					;$g_nCurSelectedIndex = DllStructGetData($tInfo, "Index")
 					ConsoleWrite("$g_nCurSelectedIndex = " & $g_nCurSelectedIndex & @CR)
 					Return 0
-            EndSwitch
+			EndSwitch
 	EndSwitch
 
-    Return $GUI_RUNDEFMSG
+	Return $GUI_RUNDEFMSG
 EndFunc   ;==>WM_NOTIFY
 
 
@@ -350,34 +387,34 @@ EndFunc   ;==>WM_NOTIFY
 
 	Local $hwndConfirmConnect = CheckWindowExist($CONFIRM_CONNECT_TITLE_CH, 30)
 	If $hwndConfirmConnect Then
-		$bRet = CheckControlAction($hwndConfirmConnect, $BUTTON_YES_TITLE, "click")
-		If $bRet Then Return 0
+	$bRet = CheckControlAction($hwndConfirmConnect, $BUTTON_YES_TITLE, "click")
+	If $bRet Then Return 0
 	EndIf
 
-EndFunc
+	EndFunc
 
-Func CheckControlAction($title, $controlID, $strAction, $strText="")
+	Func CheckControlAction($title, $controlID, $strAction, $strText="")
 	Local $hControl = ControlGetHandle($title, "", $controlID)
 	If $hControl Then
-		If $strAction == "text" Then
-			ControlSetText($title, "", $hControl, $strText)
-		ElseIf $strAction == "click" Then
-			ControlClick($title, "", $hControl)
-		EndIf
+	If $strAction == "text" Then
+	ControlSetText($title, "", $hControl, $strText)
+	ElseIf $strAction == "click" Then
+	ControlClick($title, "", $hControl)
+	EndIf
 	Else
-		MsgBox($MB_ICONWARNING, $PPMM_TITLE, "No contorl " & $controlID & " found!")
-		Return 0
+	MsgBox($MB_ICONWARNING, $PPMM_TITLE, "No contorl " & $controlID & " found!")
+	Return 0
 	EndIf
 
 	Return 1
-EndFunc
+	EndFunc
 
 
-Func CheckWindowExist($title, $nTimeOut)
+	Func CheckWindowExist($title, $nTimeOut)
 	Local $hwndConnectWindow = WinWait($title, "", $nTimeOut)
 	If $hwndConnectWindow = 0 Then
-		MsgBox($MB_ICONWARNING, $PPMM_TITLE, "No [" & $title & "] window pop up!")
-		Return 0
+	MsgBox($MB_ICONWARNING, $PPMM_TITLE, "No [" & $title & "] window pop up!")
+	Return 0
 	EndIf
 	$hwndConnectWindow = WinGetHandle($title)
 

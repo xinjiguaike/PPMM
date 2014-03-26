@@ -1,0 +1,20 @@
+https://github.com/Silvernine0S/FolderMenu3EX
+HTTP: https://github.com/Silvernine0S/FolderMenu3EX.git
+Direct Download:
+https://github.com/Silvernine0S/FolderMenu3EX/blob/master/FolderMenu.zip?raw=true
+https://github.com/Silvernine0S/FolderMenu3EX/blob/master/FolderMenu_x64.zip?raw=true
+
+http://www.autoitscript.com/autoit3/docs/appendix/fonts.htm
+http://www.autoitscript.com/autoit3/docs/functions/GUISetFont.htm
+http://www.autoitscript.com/forum/topic/1674-how-to-search-and-replace-text-in-a-file/
+http://www.autoitscript.com/forum/topic/16925-removing-comments-while-compiling/
+http://www.autoitscript.com/forum/topic/38669-new-tool-a-preprocessor/page__st__260
+http://msdn.microsoft.com/en-us/library/windows/desktop/bb756929.aspx
+http://www.autoitscript.com/forum/topic/124368-uac-elevate-and-deelevate-scripts/
+http://www.autoitscript.com/forum/topic/52201-to-run-or-to-shellexecute/
+
+http://www.autoitscript.com/forum/topic/122212-running-a-command-prompt-command-as-administrator/
+DllCall("kernel32.dll", "int", "Wow64DisableWow64FsRedirection", "int", 1) ; This disables 32bit applications from being redirected to syswow64 instead of system32 by default
+
+REMEMBER:
+Update file version in FolderMenu.au3, Changelog.txt, Readme.md, and Default.xml
