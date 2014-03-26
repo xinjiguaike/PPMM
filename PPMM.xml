@@ -15,8 +15,8 @@
 <Available>Y</Available>
 <Owner/>
 </Desktop>
-<Desktop ConnectionName="Win7_56">
-<PCName>10.224.168.56</PCName>
+<Desktop ConnectionName="hahah">
+<PCName>Test</PCName>
 <Domain>Cisco</Domain>
 <UserName>pso</UserName>
 <Password>pass</Password>
@@ -28,6 +28,26 @@
 <Domain>Cisco</Domain>
 <UserName>cisco</UserName>
 <Password>pass</Password>
+<Available>Y</Available>
+<Owner/>
+</Desktop>
+
+<Desktop ConnectionName="Win8_Home">
+<PCName>rudy's win8 PC</PCName>
+<Domain>Home</Domain>
+<UserName>yaxiong</UserName>
+<Password>pass</Password>
+<Available>Y</Available>
+<Owner/>
+</Desktop>
+
+
+
+<Desktop ConnectionName="dsfdsf">
+<PCName>fdsfdsfsd</PCName>
+<Domain>dfsd</Domain>
+<UserName> </UserName>
+<Password>dfdf</Password>
 <Available>Y</Available>
 <Owner/>
 </Desktop>

@@ -1,4 +1,8 @@
-﻿#cs ----------------------------------------------------------------------------
+﻿#Region ;**** Directives created by AutoIt3Wrapper_GUI ****
+#AutoIt3Wrapper_Icon=Microsoft Remote Desktop Connection.ico
+#AutoIt3Wrapper_Outfile=PPMM.exe
+#EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
+#cs ----------------------------------------------------------------------------
 
 	AutoIt Version: 3.3.10.2
 	Author:         Rudy
@@ -36,38 +40,15 @@
 Global Const $PPMM_TITLE = "PSO Public Machines Management"
 Global Const $PPMM_PATH = "\\pso.hz.webex.com\PSO_Share\DOC_Center\Individual\PPMM"
 Global Const $LAUNCH_RDP_PATH = @ScriptDir & "\LaunchRDP.exe"
-Global Const $PPMM_FILE_PATH = @ScriptDir & "\PSOPublicMachines.xlsx"
 Global Const $LAUNCH_RDP_PREFIX_TITLE = "LaunchRDP - "
+Global Const $PPMM_XML_PATH = @ScriptDir & "\PPMM.xml"
+Global Const $PPMM_LOG_PATH = @ScriptDir & "\PPMM.log"
 
 Global $g_aPCName[0]
 Global $g_aDomain[0]
 Global $g_aUserName[0]
 Global $g_aPassword[0]
-
-Global $g_bPPMMExcelOpened = False
-Global $g_strLogPath = @ScriptDir & "\PPMM.log"
 Global $g_nCurSelectedIndex = -1
-
-Global $g_strXMLPath = @ScriptDir & "\PPMM.xml"
-
-;AddNewDesktop($g_strXMLPath, "XP_18", "10.224.168.18", "Cisco", "cisco", "pass")
-;_XMLFileOpen($g_strXMLPath)
-;Local $nCount = _XMLGetAttrib("/PPMM/Desktop[3]", "ConnectionName")
-;_ArrayDisplay($nCount)
-;ConsoleWrite('@@ Debug(' & @ScriptLineNumber & ') : $nCount = ' & $nCount & @crlf & '>Error code: ' & @error & @crlf) ;### Debug Console
-;Exit
-
-Func AddNewDesktop($strFilePath, $strConnectionName, $strPCName, $strDomain, $strUserName, $strPassword)
-	_XMLFileOpen($strFilePath)
-	_XMLCreateRootNodeWAttr("Desktop", "ConnectionName", $strConnectionName)
-	_XMLCreateChildNode("/PPMM/Desktop[@ConnectionName='" & $strConnectionName & "']", "PCName", $strPCName)
-	_XMLCreateChildNode("/PPMM/Desktop[@ConnectionName='" & $strConnectionName & "']", "Domain", $strDomain)
-	_XMLCreateChildNode("/PPMM/Desktop[@ConnectionName='" & $strConnectionName & "']", "UserName", $strUserName)
-	_XMLCreateChildNode("/PPMM/Desktop[@ConnectionName='" & $strConnectionName & "']", "Password", $strPassword)
-	_XMLCreateChildNode("/PPMM/Desktop[@ConnectionName='" & $strConnectionName & "']", "Available", "Y")
-	_XMLCreateChildNode("/PPMM/Desktop[@ConnectionName='" & $strConnectionName & "']", "Owner", "")
-EndFunc
-
 
 Local $hGUI = GUICreate($PPMM_TITLE, 400, 450, 400, 180)
 #Region================= Layer 1 ============================================
@@ -130,7 +111,7 @@ GUICtrlSetOnEvent($btnSaveEdit, "OnBtnSaveClicked")
 SetLayer2State($GUI_HIDE)
 #EndRegion
 
-SyncFromServer($PPMM_FILE_PATH)
+SyncFromServer($PPMM_XML_PATH)
 
 Opt("GUIOnEventMode", 1)
 GUIRegisterMsg($WM_NOTIFY, "WM_NOTIFY")
@@ -192,7 +173,14 @@ Func OnBtnNewClicked()
 EndFunc   ;==>OnBtnNewClicked
 
 Func OnBtnEditClicked()
+	Local $aItemInfo = _GUICtrlListView_GetItem($listviewConnections, $g_nCurSelectedIndex)
+	If $aItemInfo[4] = 0 Then
+		MsgBox($MB_ICONWARNING, "PPMM", "Current desktop is being used, you can not edit it!")
+		Return 0
+	EndIf
+
 	SetLayer1State($GUI_HIDE)
+
 	Local $strConnectionName = _GUICtrlListView_GetItemText($listviewConnections, $g_nCurSelectedIndex)
 	GUICtrlSetData($inputConnectionName, $strConnectionName)
 	GUICtrlSetData($inputPCName, $g_aPCName[$g_nCurSelectedIndex])
@@ -204,11 +192,17 @@ Func OnBtnEditClicked()
 EndFunc   ;==>OnBtnEditClicked
 
 Func OnBtnDeleteClicked()
-	_GUICtrlListView_DeleteItemsSelected($listviewConnections)
+	Local $aItemInfo = _GUICtrlListView_GetItem($listviewConnections, $g_nCurSelectedIndex)
+	If $aItemInfo[4] = 0 Then
+		MsgBox($MB_ICONWARNING, "PPMM", "Current desktop is being used, you can not delete it!")
+		Return 0
+	EndIf
+	_XMLDeleteNode("PPMM/Desktop[" & $g_nCurSelectedIndex+1 & "]")
+	SyncFromServer($PPMM_XML_PATH)
 EndFunc   ;==>OnBtnDeleteClicked
 
 Func OnBtnRefreshClicked()
-	SyncFromServer($PPMM_FILE_PATH)
+	SyncFromServer($PPMM_XML_PATH)
 EndFunc   ;==>OnBtnRefreshClicked
 
 Func OnBtnStartConnectionClicked()
@@ -221,21 +215,39 @@ Func OnBtnCancelClicked()
 EndFunc   ;==>OnBtnCancelClicked
 
 Func OnBtnSaveClicked()
+	Local $strConnectionName = GUICtrlRead($inputConnectionName)
+	Local $strPCName = GUICtrlRead($inputPCName)
+	Local $strDomain = GUICtrlRead($inputDomain)
+	Local $strUserName = GUICtrlRead($inputUserName)
+	Local $strPassword = GUICtrlRead($inputPassword)
+	If $strConnectionName == "" Or $strPCName == "" Or $strDomain == "" Or $strUserName == "" Or $strPassword == "" Then
+		MsgBox($MB_ICONWARNING, "PPMM", "Please don't leave any field empty!")
+		Return 0
+	EndIf
+
 	If @GUI_CtrlId = $btnSaveNew Then
-		ConsoleWrite("Save New." & @CR)
+		AddNewDesktop($PPMM_XML_PATH, $strConnectionName, $strPCName, $strDomain, $strUserName, $strPassword)
+		SyncFromServer($PPMM_XML_PATH)
+		SetLayer1State($GUI_SHOW)
+		SetLayer2State($GUI_HIDE)
 	ElseIf @GUI_CtrlId = $btnSaveEdit Then
-		ConsoleWrite("Save Edit." & @CR)
+		UpdateSlecetedDesktop($PPMM_XML_PATH, $g_nCurSelectedIndex, $strConnectionName, $strPCName, $strDomain, $strUserName, $strPassword)
+		SyncFromServer($PPMM_XML_PATH)
+		SetLayer1State($GUI_SHOW)
+		SetLayer2State($GUI_HIDE)
 	EndIf
 EndFunc   ;==>OnBtnSaveClicked
 
 Func SyncFromServer($strFilePath)
-	_GUICtrlListView_DeleteAllItems($listviewConnections);Before Syncing, clear all
-	;================ To Do ===================
-
-	;Clear all Array
-
+	;================ Clear all Array =========
+	ReDim $g_aPCName[0]
+	ReDim $g_aDomain[0]
+	ReDim $g_aUserName[0]
+	ReDim $g_aPassword[0]
 	;==========================================
-	_XMLFileOpen($g_strXMLPath)
+	_GUICtrlListView_DeleteAllItems($listviewConnections);Before Syncing, clear all
+
+	_XMLFileOpen($strFilePath)
 	Local $nDesktopCount = _XMLGetNodeCount("/PPMM/Desktop")
 	Local $bGray = True
 
@@ -248,7 +260,7 @@ Func SyncFromServer($strFilePath)
 		Local $strUserName = _XMLGetValue("/PPMM/Desktop[" & $i & "]/UserName")[1]
 		Local $strPassword = _XMLGetValue("/PPMM/Desktop[" & $i & "]/Password")[1]
 
-		$itemListView = GUICtrlCreateListViewItem("", $listviewConnections)
+		Local $itemListView = GUICtrlCreateListViewItem("", $listviewConnections)
 		If $strAvailable == "N" Then
 			_GUICtrlListView_AddSubItem($listviewConnections, $i-1, $strConnectionName, 0, 0)
 			_GUICtrlListView_AddSubItem($listviewConnections, $i-1, $strOwner, 1)
@@ -269,15 +281,31 @@ Func SyncToServer($nIndex)
 	Return 0
 EndFunc   ;==>SyncToServer
 
-Func AddNewMachine()
+Func AddNewDesktop($strFilePath, $strConnectionName, $strPCName, $strDomain, $strUserName, $strPassword)
+	_XMLFileOpen($strFilePath)
+	_XMLCreateRootNodeWAttr("Desktop", "ConnectionName", $strConnectionName)
+	_XMLCreateChildNode("/PPMM/Desktop[@ConnectionName='" & $strConnectionName & "']", "PCName", $strPCName)
+	_XMLCreateChildNode("/PPMM/Desktop[@ConnectionName='" & $strConnectionName & "']", "Domain", $strDomain)
+	_XMLCreateChildNode("/PPMM/Desktop[@ConnectionName='" & $strConnectionName & "']", "UserName", $strUserName)
+	_XMLCreateChildNode("/PPMM/Desktop[@ConnectionName='" & $strConnectionName & "']", "Password", $strPassword)
+	_XMLCreateChildNode("/PPMM/Desktop[@ConnectionName='" & $strConnectionName & "']", "Available", "Y")
+	_XMLCreateChildNode("/PPMM/Desktop[@ConnectionName='" & $strConnectionName & "']", "Owner", "")
+EndFunc
 
-EndFunc   ;==>AddNewMachine
-
+Func UpdateSlecetedDesktop($strFilePath, $nIndex, $strConnectionName, $strPCName, $strDomain, $strUserName, $strPassword)
+	_XMLFileOpen($strFilePath)
+	_XMLSetAttrib("/PPMM/Desktop", "ConnectionName", $strConnectionName, $nIndex)
+	_XMLUpdateField("/PPMM/Desktop[" & $nIndex+1 & "]/PCName", $strPCName)
+	_XMLUpdateField("/PPMM/Desktop[" & $nIndex+1 & "]/Domain", $strDomain)
+	_XMLUpdateField("/PPMM/Desktop[" & $nIndex+1 & "]/UserName", $strUserName)
+	_XMLUpdateField("/PPMM/Desktop[" & $nIndex+1 & "]/Password", $strPassword)
+EndFunc
 
 Func ConnectRemoteComputer($nIndex)
 	Local $aItemInfo = _GUICtrlListView_GetItem($listviewConnections, $nIndex)
 	If $aItemInfo[4] = 0 Then
-		MsgBox($MB_ICONERROR, "PPMM", "Current desktop is being used, please select another desktop!")
+		Local $strOwner = _GUICtrlListView_GetItemText($listviewConnections, $nIndex, 1)
+		MsgBox($MB_ICONWARNING, "PPMM", "Current desktop is being used by " & $strOwner & ", please select another desktop!")
 		Return 0
 	EndIf
 
