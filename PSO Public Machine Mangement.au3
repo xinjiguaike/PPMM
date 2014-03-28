@@ -1,5 +1,5 @@
 ﻿#Region ;**** Directives created by AutoIt3Wrapper_GUI ****
-#AutoIt3Wrapper_Icon=Microsoft Remote Desktop Connection.ico
+#AutoIt3Wrapper_Icon=ICO File\Microsoft Remote Desktop Connection.ico
 #AutoIt3Wrapper_Outfile=PPMM.exe
 #EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
 #cs ----------------------------------------------------------------------------
@@ -39,16 +39,19 @@
 
 Global Const $PPMM_TITLE = "PSO Public Machines Management"
 Global Const $PPMM_PATH = "\\pso.hz.webex.com\PSO_Share\DOC_Center\Individual\PPMM"
-Global Const $LAUNCH_RDP_PATH = @ScriptDir & "\LaunchRDP.exe"
+Global Const $LAUNCH_RDP_PATH = $PPMM_PATH & "\LaunchRDP.exe"
 Global Const $LAUNCH_RDP_PREFIX_TITLE = "LaunchRDP - "
-Global Const $PPMM_XML_PATH = @ScriptDir & "\PPMM.xml"
-Global Const $PPMM_LOG_PATH = @ScriptDir & "\PPMM.log"
+Global Const $PPMM_XML_PATH = $PPMM_PATH & "\PPMM.xml"
+Global Const $PPMM_LOG_PATH = $PPMM_PATH & "\PPMM.log"
 
 Global $g_aPCName[0]
 Global $g_aDomain[0]
 Global $g_aUserName[0]
 Global $g_aPassword[0]
 Global $g_nCurSelectedIndex = -1
+Global $g_nConnectedIndex = -1
+Global $g_bBeginCheckWindow = False
+Global $g_strRemoteConnectionTitle = ""
 
 Local $hGUI = GUICreate($PPMM_TITLE, 400, 450, 400, 180)
 #Region================= Layer 1 ============================================
@@ -114,11 +117,19 @@ SetLayer2State($GUI_HIDE)
 SyncFromServer($PPMM_XML_PATH)
 
 Opt("GUIOnEventMode", 1)
+Opt("TrayAutoPause", 0)
+
 GUIRegisterMsg($WM_NOTIFY, "WM_NOTIFY")
 
 GUISetState(@SW_SHOW)
 
 While 1
+	If $g_bBeginCheckWindow Then
+		If WinExists($g_strRemoteConnectionTitle) = 0 Then
+			UpdateDesktopState($g_nConnectedIndex)
+		EndIf
+	EndIf
+
 	Sleep(100)
 WEnd
 
@@ -178,16 +189,13 @@ Func OnBtnEditClicked()
 		MsgBox($MB_ICONWARNING, "PPMM", "Current desktop is being used, you can not edit it!")
 		Return 0
 	EndIf
-
-	SetLayer1State($GUI_HIDE)
-
-	Local $strConnectionName = _GUICtrlListView_GetItemText($listviewConnections, $g_nCurSelectedIndex)
-	GUICtrlSetData($inputConnectionName, $strConnectionName)
+	GUICtrlSetData($inputConnectionName, $aItemInfo[3])
 	GUICtrlSetData($inputPCName, $g_aPCName[$g_nCurSelectedIndex])
 	GUICtrlSetData($inputDomain, $g_aDomain[$g_nCurSelectedIndex])
 	GUICtrlSetData($inputUserName, $g_aUserName[$g_nCurSelectedIndex])
 	GUICtrlSetData($inputPassword, $g_aPassword[$g_nCurSelectedIndex])
 
+	SetLayer1State($GUI_HIDE)
 	SetLayer2State($GUI_SHOW, "Edit")
 EndFunc   ;==>OnBtnEditClicked
 
@@ -290,7 +298,7 @@ Func AddNewDesktop($strFilePath, $strConnectionName, $strPCName, $strDomain, $st
 	_XMLCreateChildNode("/PPMM/Desktop[@ConnectionName='" & $strConnectionName & "']", "Password", $strPassword)
 	_XMLCreateChildNode("/PPMM/Desktop[@ConnectionName='" & $strConnectionName & "']", "Available", "Y")
 	_XMLCreateChildNode("/PPMM/Desktop[@ConnectionName='" & $strConnectionName & "']", "Owner", "")
-EndFunc
+EndFunc   ;==>AddNewDesktop
 
 Func UpdateSlecetedDesktop($strFilePath, $nIndex, $strConnectionName, $strPCName, $strDomain, $strUserName, $strPassword)
 	_XMLFileOpen($strFilePath)
@@ -299,7 +307,20 @@ Func UpdateSlecetedDesktop($strFilePath, $nIndex, $strConnectionName, $strPCName
 	_XMLUpdateField("/PPMM/Desktop[" & $nIndex+1 & "]/Domain", $strDomain)
 	_XMLUpdateField("/PPMM/Desktop[" & $nIndex+1 & "]/UserName", $strUserName)
 	_XMLUpdateField("/PPMM/Desktop[" & $nIndex+1 & "]/Password", $strPassword)
-EndFunc
+EndFunc   ;==>UpdateSlecetedDesktop
+
+Func UpdateDesktopState($nIndex, $strAvailable="Y", $strOwner="", $nItemImage = 1)
+	_GUICtrlListView_SetItemImage($listviewConnections, $nIndex, $nItemImage)
+	If $strAvailable == "N" Then
+		_GUICtrlListView_AddSubItem($listviewConnections, $nIndex, $strOwner, 1)
+	Else
+		_GUICtrlListView_SetItemText($listviewConnections, $nIndex, $strOwner, 1)
+	EndIf
+
+	_XMLFileOpen($PPMM_XML_PATH)
+	_XMLUpdateField("/PPMM/Desktop[" & $nIndex+1 & "]/Available", $strAvailable)
+	_XMLUpdateField("/PPMM/Desktop[" & $nIndex+1 & "]/Owner", $strOwner)
+EndFunc   ;==>UpdateDesktopState
 
 Func ConnectRemoteComputer($nIndex)
 	Local $aItemInfo = _GUICtrlListView_GetItem($listviewConnections, $nIndex)
@@ -316,16 +337,15 @@ Func ConnectRemoteComputer($nIndex)
 	EndIf
 
 	Local $strCMDLine = $LAUNCH_RDP_PATH & " " & $g_aPCName[$nIndex] & " 3389 " & $g_aUserName[$nIndex] & " " & $g_aDomain[$nIndex] & " " & $g_aPassword[$nIndex] & " 0 0 0"
-	;ConsoleWrite($strCMDLine & @CR)
 	Run($strCMDLine)
-	Local $strRemoteConnectionTitle = $LAUNCH_RDP_PREFIX_TITLE & $g_aPCName[$nIndex]
-	Local $hwndLaunchRDP = WinWait($strRemoteConnectionTitle, "", 30)
+	$g_strRemoteConnectionTitle = $LAUNCH_RDP_PREFIX_TITLE & $g_aPCName[$nIndex]
+	Local $hwndLaunchRDP = WinWait($g_strRemoteConnectionTitle, "", 30)
 	If $hwndLaunchRDP = 0 Then Return 0
 
-	_GUICtrlListView_SetItemImage($listviewConnections, $nIndex, 0)
-	_GUICtrlListView_AddSubItem($listviewConnections, $nIndex, $strYourName, 1)
+	$g_nConnectedIndex = $nIndex
+	$g_bBeginCheckWindow = True
 
-	SyncToServer($nIndex)
+	UpdateDesktopState($g_nConnectedIndex, "N", $strYourName, 0)
 
 	Return 1
 
@@ -343,9 +363,13 @@ Func WM_NOTIFY($hWnd, $iMsg, $iwParam, $ilParam)
 	Switch $hWndFrom
 		Case $hWndListView
 			Switch $iCode
-				Case $NM_CLICK ; Sent by a list-view control when the user clicks an item with the left mouse button
-					$tInfo = DllStructCreate($tagNMITEMACTIVATE, $ilParam)
-					$g_nCurSelectedIndex = DllStructGetData($tInfo, "Index")
+				Case $LVN_ITEMCHANGED ; Sent by a list-view control when the user clicks an item with the left mouse button
+					Local $aItemsIndex = _GUICtrlListView_GetSelectedIndices($listviewConnections, True)
+					If $aItemsIndex[0] == 1 Then
+						$g_nCurSelectedIndex = $aItemsIndex[1]
+					Else
+						$g_nCurSelectedIndex = -1
+					EndIf
 					If $g_nCurSelectedIndex = -1 Then
 						GUICtrlSetState($btnStartConnection, $GUI_DISABLE)
 						GUICtrlSetState($btnEditConnection, $GUI_DISABLE)
@@ -355,24 +379,15 @@ Func WM_NOTIFY($hWnd, $iMsg, $iwParam, $ilParam)
 						GUICtrlSetState($btnEditConnection, $GUI_ENABLE)
 						GUICtrlSetState($btnDeleteConnection, $GUI_ENABLE)
 					EndIf
-					Return 0
 				Case $NM_DBLCLK ; Sent by a list-view control when the user clicks an item with the right mouse button
 					$tInfo = DllStructCreate($tagNMITEMACTIVATE, $ilParam)
 					$g_nCurSelectedIndex = DllStructGetData($tInfo, "Index")
-					ConnectRemoteComputer($g_nCurSelectedIndex)
-					Return 0 ; allow the default processing
-				Case $LVN_KEYDOWN
-					$tInfo = DllStructCreate($tagNMITEMACTIVATE, $ilParam)
-					;$g_nCurSelectedIndex = DllStructGetData($tInfo, "Index")
-					ConsoleWrite("$g_nCurSelectedIndex = " & $g_nCurSelectedIndex & @CR)
-					Return 0
+					If $g_nCurSelectedIndex <> -1 Then	ConnectRemoteComputer($g_nCurSelectedIndex)
 			EndSwitch
 	EndSwitch
 
 	Return $GUI_RUNDEFMSG
 EndFunc   ;==>WM_NOTIFY
-
-
 
 #cs
 	Local $bRet = 0
