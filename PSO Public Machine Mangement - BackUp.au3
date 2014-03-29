@@ -24,6 +24,20 @@
 #include <TrayConstants.au3>
 #include <_XMLDomWrapper_.au3>
 
+#cs
+	Global Const $REMOTE_CONNECT_TITLE_CH = "远程桌面连接"
+	Global Const $SECURITY_WARNING_TITLE_CH = "Windows 安全"
+	Global Const $CONFIRM_CONNECT_TITLE_CH = "[TITLE:远程桌面连接;CLASS:#32770;INSTANCE:1]"
+	Global Const $INPUT_COMPUTER_TITLE = "[CLASS:ComboBoxEx32;ID:5012]"
+	Global Const $BUTTON_CONNECT_TITLE = "[CLASS:Button;ID:1]"
+	Global Const $DISPLAY_OPTIONS_TITLE = "[CLASS:ToolbarWindow32;ID:5017]"
+	Global Const $IN_INPUT_COMPUTER_TITLE = "[CLASS:ComboBoxEx32;INSTANCE:1]"
+	Global Const $IN_INPUT_USERNAME_TITLE = "[CLASS:Edit;ID:13064]"
+	Global Const $EDIT_PASSWORD_TITLE = "[CLASS:Edit;INSTANCE:1]"
+	Global Const $BUTTON_CONFIRM_TITLE = "[CLASS:Button;INSTANCE:2]"
+	Global Const $BUTTON_YES_TITLE = "[CLASS:Button;ID:14004]"
+#ce
+
 Global Const $PPMM_TITLE = "PSO Public Machines Management"
 Global Const $PPMM_PATH = "\\pso.hz.webex.com\PSO_Share\DOC_Center\Individual\PPMM"
 Global Const $LAUNCH_RDP_PATH = $PPMM_PATH & "\LaunchRDP.exe"
@@ -41,7 +55,6 @@ Global $g_bBeginCheckWindow = False
 Global $g_strRemoteConnectionTitle = ""
 
 Local $hGUI = GUICreate($PPMM_TITLE, 400, 450, 400, 180)
-
 #Region================= Layer 1 ============================================
 Local $btnNewConnection = GUICtrlCreateButton("New", 50, 20, 60, 30)
 Local $btnEditConnection = GUICtrlCreateButton("Edit", 130, 20, 60, 30)
@@ -71,7 +84,7 @@ GUICtrlSetOnEvent($btnEditConnection, "OnBtnEditClicked")
 GUICtrlSetOnEvent($btnDeleteConnection, "OnBtnDeleteClicked")
 GUICtrlSetOnEvent($btnRefreshConnection, "OnBtnRefreshClicked")
 GUICtrlSetOnEvent($btnStartConnection, "OnBtnStartConnectionClicked")
-#EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
+#EndRegion
 
 #Region================= Layer 2 ============================================
 Local $lableEditRemoteDesktop = GUICtrlCreateLabel("Edit Remote Desktop", 140, 20, 160, 23)
@@ -100,7 +113,7 @@ GUICtrlSetOnEvent($btnCancel, "OnBtnCancelClicked")
 GUICtrlSetOnEvent($btnSaveNew, "OnBtnSaveClicked")
 GUICtrlSetOnEvent($btnSaveEdit, "OnBtnSaveClicked")
 SetLayer2State($GUI_HIDE)
-#EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
+#EndRegion
 
 SyncFromServer($PPMM_XML_PATH)
 
@@ -121,6 +134,23 @@ TraySetOnEvent($TRAY_EVENT_PRIMARYDOUBLE, "OnTrayEvent")
 TraySetOnEvent($TRAY_EVENT_PRIMARYUP, "OnTrayEvent")
 
 GUISetState(@SW_SHOW)
+
+Func ShowPPMM()
+	GUISetState(@SW_SHOW)
+EndFunc
+
+Func ExitScript()
+	GUIDelete($hGUI)
+	Exit
+EndFunc
+
+Func OnTrayEvent()
+	If @TRAY_ID = $TRAY_EVENT_PRIMARYDOUBLE Then
+		GUISetState(@SW_SHOW)
+	Else
+		MsgBox($MB_ICONWARNING, "", "MouseUp")
+	EndIf
+EndFunc
 
 While 1
 	If $g_bBeginCheckWindow Then
@@ -167,25 +197,10 @@ Func SetLayer2State($nState, $strType = "All")
 	EndIf
 EndFunc   ;==>SetLayer2State
 
-Func ShowPPMM()
-	GUISetState(@SW_SHOW)
-EndFunc   ;==>ShowPPMM
-
-Func ExitScript()
-	GUIDelete($hGUI)
-	Exit
-EndFunc   ;==>ExitScript
-
-Func OnTrayEvent()
-	If @TRAY_ID = $TRAY_EVENT_PRIMARYDOUBLE Then
-		GUISetState(@SW_SHOW)
-	Else
-		MsgBox($MB_ICONWARNING, "", "MouseUp")
-	EndIf
-EndFunc   ;==>OnTrayEvent
-
 Func OnEventClose()
 	GUISetState(@SW_HIDE)
+	;GUIDelete($hGUI)
+	;Exit
 EndFunc   ;==>OnEventClose
 
 Func OnBtnNewClicked()
@@ -220,7 +235,7 @@ Func OnBtnDeleteClicked()
 		MsgBox($MB_ICONWARNING, "PPMM", "Current desktop is being used, you can not delete it!")
 		Return 0
 	EndIf
-	_XMLDeleteNode("PPMM/Desktop[" & $g_nCurSelectedIndex + 1 & "]")
+	_XMLDeleteNode("PPMM/Desktop[" & $g_nCurSelectedIndex+1 & "]")
 	SyncFromServer($PPMM_XML_PATH)
 EndFunc   ;==>OnBtnDeleteClicked
 
@@ -285,10 +300,10 @@ Func SyncFromServer($strFilePath)
 
 		Local $itemListView = GUICtrlCreateListViewItem("", $listviewConnections)
 		If $strAvailable == "N" Then
-			_GUICtrlListView_AddSubItem($listviewConnections, $i - 1, $strConnectionName, 0, 0)
-			_GUICtrlListView_AddSubItem($listviewConnections, $i - 1, $strOwner, 1)
+			_GUICtrlListView_AddSubItem($listviewConnections, $i-1, $strConnectionName, 0, 0)
+			_GUICtrlListView_AddSubItem($listviewConnections, $i-1, $strOwner, 1)
 		Else
-			_GUICtrlListView_AddSubItem($listviewConnections, $i - 1, $strConnectionName, 0, 1)
+			_GUICtrlListView_AddSubItem($listviewConnections, $i-1, $strConnectionName, 0, 1)
 		EndIf
 		$bGray = Not $bGray
 		If $bGray Then GUICtrlSetBkColor($itemListView, 0xE9F0FE)
@@ -318,13 +333,13 @@ EndFunc   ;==>AddNewDesktop
 Func UpdateSlecetedDesktop($strFilePath, $nIndex, $strConnectionName, $strPCName, $strDomain, $strUserName, $strPassword)
 	_XMLFileOpen($strFilePath)
 	_XMLSetAttrib("/PPMM/Desktop", "ConnectionName", $strConnectionName, $nIndex)
-	_XMLUpdateField("/PPMM/Desktop[" & $nIndex + 1 & "]/PCName", $strPCName)
-	_XMLUpdateField("/PPMM/Desktop[" & $nIndex + 1 & "]/Domain", $strDomain)
-	_XMLUpdateField("/PPMM/Desktop[" & $nIndex + 1 & "]/UserName", $strUserName)
-	_XMLUpdateField("/PPMM/Desktop[" & $nIndex + 1 & "]/Password", $strPassword)
+	_XMLUpdateField("/PPMM/Desktop[" & $nIndex+1 & "]/PCName", $strPCName)
+	_XMLUpdateField("/PPMM/Desktop[" & $nIndex+1 & "]/Domain", $strDomain)
+	_XMLUpdateField("/PPMM/Desktop[" & $nIndex+1 & "]/UserName", $strUserName)
+	_XMLUpdateField("/PPMM/Desktop[" & $nIndex+1 & "]/Password", $strPassword)
 EndFunc   ;==>UpdateSlecetedDesktop
 
-Func UpdateDesktopState($nIndex, $strAvailable = "Y", $strOwner = "", $nItemImage = 1)
+Func UpdateDesktopState($nIndex, $strAvailable="Y", $strOwner="", $nItemImage = 1)
 	_GUICtrlListView_SetItemImage($listviewConnections, $nIndex, $nItemImage)
 	If $strAvailable == "N" Then
 		_GUICtrlListView_AddSubItem($listviewConnections, $nIndex, $strOwner, 1)
@@ -333,8 +348,8 @@ Func UpdateDesktopState($nIndex, $strAvailable = "Y", $strOwner = "", $nItemImag
 	EndIf
 
 	_XMLFileOpen($PPMM_XML_PATH)
-	_XMLUpdateField("/PPMM/Desktop[" & $nIndex + 1 & "]/Available", $strAvailable)
-	_XMLUpdateField("/PPMM/Desktop[" & $nIndex + 1 & "]/Owner", $strOwner)
+	_XMLUpdateField("/PPMM/Desktop[" & $nIndex+1 & "]/Available", $strAvailable)
+	_XMLUpdateField("/PPMM/Desktop[" & $nIndex+1 & "]/Owner", $strOwner)
 EndFunc   ;==>UpdateDesktopState
 
 Func ConnectRemoteComputer($nIndex)
@@ -397,10 +412,86 @@ Func WM_NOTIFY($hWnd, $iMsg, $iwParam, $ilParam)
 				Case $NM_DBLCLK ; Sent by a list-view control when the user clicks an item with the right mouse button
 					$tInfo = DllStructCreate($tagNMITEMACTIVATE, $ilParam)
 					$g_nCurSelectedIndex = DllStructGetData($tInfo, "Index")
-					If $g_nCurSelectedIndex <> -1 Then ConnectRemoteComputer($g_nCurSelectedIndex)
+					If $g_nCurSelectedIndex <> -1 Then	ConnectRemoteComputer($g_nCurSelectedIndex)
 			EndSwitch
 	EndSwitch
 
 	Return $GUI_RUNDEFMSG
 EndFunc   ;==>WM_NOTIFY
+
+#cs
+	Local $bRet = 0
+	Local $hwndRemoteConnect = CheckWindowExist($REMOTE_CONNECT_TITLE_CH, 30)
+	If $hwndRemoteConnect = 0 Then Return 0
+	WinActivate($hwndRemoteConnect)
+
+	#Region==================================
+	;click 'show options'
+	$bRet = CheckControlAction($hwndRemoteConnect, $DISPLAY_OPTIONS_TITLE, "click")
+	If $bRet = 0 Then Return 0
+
+	Sleep(3000)
+
+	;input computer name
+	$bRet = CheckControlAction($hwndRemoteConnect, $IN_INPUT_COMPUTER_TITLE, "text", $strPCName)
+	If $bRet = 0 Then Return 0
+
+	;input user name
+	$bRet = CheckControlAction($hwndRemoteConnect, $IN_INPUT_USERNAME_TITLE, "text", $strUserName)
+	If $bRet = 0 Then Return 0
+
+	;click 'connect'
+	$bRet = CheckControlAction($hwndRemoteConnect, $BUTTON_CONNECT_TITLE, "click")
+	If $bRet = 0 Then Return 0
+	#EndRegion
+
+	Local $hwndSecurityWarning = CheckWindowExist($SECURITY_WARNING_TITLE_CH, 30)
+	If $hwndSecurityWarning = 0 Then Return 0
+
+	#Region=======================
+	;input password
+	$bRet = CheckControlAction($hwndSecurityWarning, $EDIT_PASSWORD_TITLE, "text", $strPassword)
+	If $bRet = 0 Then Return 0
+
+	;click 'confirm' button
+	$bRet = CheckControlAction($hwndSecurityWarning, $BUTTON_CONFIRM_TITLE, "click")
+	If $bRet = 0 Then Return 0
+	#EndRegion
+
+	Local $hwndConfirmConnect = CheckWindowExist($CONFIRM_CONNECT_TITLE_CH, 30)
+	If $hwndConfirmConnect Then
+	$bRet = CheckControlAction($hwndConfirmConnect, $BUTTON_YES_TITLE, "click")
+	If $bRet Then Return 0
+	EndIf
+
+	EndFunc
+
+	Func CheckControlAction($title, $controlID, $strAction, $strText="")
+	Local $hControl = ControlGetHandle($title, "", $controlID)
+	If $hControl Then
+	If $strAction == "text" Then
+	ControlSetText($title, "", $hControl, $strText)
+	ElseIf $strAction == "click" Then
+	ControlClick($title, "", $hControl)
+	EndIf
+	Else
+	MsgBox($MB_ICONWARNING, $PPMM_TITLE, "No contorl " & $controlID & " found!")
+	Return 0
+	EndIf
+
+	Return 1
+	EndFunc
+
+
+	Func CheckWindowExist($title, $nTimeOut)
+	Local $hwndConnectWindow = WinWait($title, "", $nTimeOut)
+	If $hwndConnectWindow = 0 Then
+	MsgBox($MB_ICONWARNING, $PPMM_TITLE, "No [" & $title & "] window pop up!")
+	Return 0
+	EndIf
+	$hwndConnectWindow = WinGetHandle($title)
+
+	Return $hwndConnectWindow
+#ce
+
 
