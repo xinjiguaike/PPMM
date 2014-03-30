@@ -177,11 +177,7 @@ Func ExitScript()
 EndFunc   ;==>ExitScript
 
 Func OnTrayEvent()
-	If @TRAY_ID = $TRAY_EVENT_PRIMARYDOUBLE Then
-		GUISetState(@SW_SHOW)
-	Else
-		MsgBox($MB_ICONWARNING, "", "MouseUp")
-	EndIf
+	If @TRAY_ID = $TRAY_EVENT_PRIMARYDOUBLE Then	GUISetState(@SW_SHOW)
 EndFunc   ;==>OnTrayEvent
 
 Func OnEventClose()
