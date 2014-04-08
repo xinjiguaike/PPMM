@@ -102,8 +102,6 @@ GUICtrlSetOnEvent($btnSaveEdit, "OnBtnSaveClicked")
 SetLayer2State($GUI_HIDE)
 #EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
 
-SyncFromServer($PPMM_XML_PATH)
-
 Opt("GUIOnEventMode", 1)
 Opt("TrayAutoPause", 0)
 Opt("TrayOnEventMode", 1)
@@ -121,6 +119,9 @@ TraySetOnEvent($TRAY_EVENT_PRIMARYDOUBLE, "OnTrayEvent")
 TraySetOnEvent($TRAY_EVENT_PRIMARYUP, "OnTrayEvent")
 
 GUISetState(@SW_SHOW)
+SyncFromServer($PPMM_XML_PATH)
+
+
 
 While 1
 	If $g_bBeginCheckWindow Then
