@@ -124,8 +124,6 @@ TraySetOnEvent($TRAY_EVENT_PRIMARYUP, "OnTrayEvent")
 GUISetState(@SW_SHOW)
 SyncFromServer($PPMM_XML_PATH)
 
-
-
 While 1
 	If $g_bBeginCheckWindow Then
 		If WinExists($g_strRemoteConnectionTitle) = 0 Then
@@ -176,6 +174,13 @@ Func ShowPPMM()
 EndFunc   ;==>ShowPPMM
 
 Func ExitScript()
+	Local $nPressed = MsgBox($MB_OKCANCEL, "PPMM", "If exit the PPMM, current connection will be closed, really exit?")
+	If $nPressed = $IDOK Then
+		ProcessClose("mstsc.exe")
+		UpdateDesktopState($g_nConnectedIndex)
+	Else
+		Return
+	EndIf
 	GUIDelete($hGUI)
 	Exit
 EndFunc   ;==>ExitScript
