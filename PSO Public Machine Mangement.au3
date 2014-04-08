@@ -18,11 +18,14 @@
 #include <ColorConstants.au3>
 #include <GuiListView.au3>
 #include <GuiImageList.au3>
+#include <Misc.au3>
 #include <Excel.au3>
 #include <File.au3>
 #include <Array.au3>
 #include <TrayConstants.au3>
 #include <_XMLDomWrapper_.au3>
+
+_Singleton("PPMM"); Just run one instance of PPMM
 
 Global Const $PPMM_TITLE = "PSO Public Machines Management"
 Global Const $PPMM_PATH = "\\pso.hz.webex.com\PSO_Share\DOC_Center\Individual\PPMM"
