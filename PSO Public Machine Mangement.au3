@@ -28,7 +28,7 @@
 _Singleton("PPMM"); Just run one instance of PPMM
 
 Global Const $PPMM_TITLE = "PSO Public Machines Management"
-Global Const $PPMM_PATH = "\\pso.hz.webex.com\PSO_Share\DOC_Center\Individual\PPMM"
+Global Const $PPMM_PATH = "\\10.224.172.65\PSO_Share\DOC_Center\Individual\PPMM"
 Global Const $LAUNCH_RDP_PATH = $PPMM_PATH & "\LaunchRDP.exe"
 Global Const $LAUNCH_RDP_PREFIX_TITLE = "LaunchRDP - "
 Global Const $PPMM_XML_PATH = $PPMM_PATH & "\PPMM.xml"
@@ -124,6 +124,8 @@ TraySetOnEvent($TRAY_EVENT_PRIMARYUP, "OnTrayEvent")
 GUISetState(@SW_SHOW)
 SyncFromServer($PPMM_XML_PATH)
 
+AdlibRegister("OnBtnRefreshClicked", 60000)
+
 While 1
 	If $g_bBeginCheckWindow Then
 		If WinExists($g_strRemoteConnectionTitle) = 0 Then
@@ -181,6 +183,7 @@ Func ExitScript()
 	Else
 		Return
 	EndIf
+	AdlibUnRegister("OnBtnRefreshClicked")
 	GUIDelete($hGUI)
 	Exit
 EndFunc   ;==>ExitScript
