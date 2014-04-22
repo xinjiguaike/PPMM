@@ -1,6 +1,6 @@
 ﻿#Region ;**** Directives created by AutoIt3Wrapper_GUI ****
 #AutoIt3Wrapper_Icon=ICO File\Microsoft Remote Desktop Connection.ico
-#AutoIt3Wrapper_Outfile=PPMM.exe
+#AutoIt3Wrapper_Outfile=PPMM_Admin.exe
 #EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
 #cs ----------------------------------------------------------------------------
 
