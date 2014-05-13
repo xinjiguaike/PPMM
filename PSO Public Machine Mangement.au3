@@ -1,6 +1,6 @@
 ﻿#Region ;**** Directives created by AutoIt3Wrapper_GUI ****
 #AutoIt3Wrapper_Icon=ICO File\Microsoft Remote Desktop Connection.ico
-#AutoIt3Wrapper_Outfile=PPMM.exe
+#AutoIt3Wrapper_Outfile=PPMM_Admin.exe
 #EndRegion ;**** Directives created by AutoIt3Wrapper_GUI ****
 #cs ----------------------------------------------------------------------------
 
@@ -18,14 +18,17 @@
 #include <ColorConstants.au3>
 #include <GuiListView.au3>
 #include <GuiImageList.au3>
+#include <Misc.au3>
 #include <Excel.au3>
 #include <File.au3>
 #include <Array.au3>
 #include <TrayConstants.au3>
 #include <_XMLDomWrapper_.au3>
 
+_Singleton("PPMM"); Just run one instance of PPMM
+
 Global Const $PPMM_TITLE = "PSO Public Machines Management"
-Global Const $PPMM_PATH = "\\pso.hz.webex.com\PSO_Share\DOC_Center\Individual\PPMM"
+Global Const $PPMM_PATH = "\\10.224.172.65\PSO_Share\DOC_Center\Individual\PPMM"
 Global Const $LAUNCH_RDP_PATH = $PPMM_PATH & "\LaunchRDP.exe"
 Global Const $LAUNCH_RDP_PREFIX_TITLE = "LaunchRDP - "
 Global Const $PPMM_XML_PATH = $PPMM_PATH & "\PPMM.xml"
@@ -121,8 +124,11 @@ TraySetOnEvent($TRAY_EVENT_PRIMARYUP, "OnTrayEvent")
 GUISetState(@SW_SHOW)
 SyncFromServer($PPMM_XML_PATH)
 
+<<<<<<< HEAD
+=======
+AdlibRegister("OnBtnRefreshClicked", 60000)
 
-
+>>>>>>> fcf24b453819edd4484c559c4363561fab7667c0
 While 1
 	If $g_bBeginCheckWindow Then
 		If WinExists($g_strRemoteConnectionTitle) = 0 Then
@@ -173,6 +179,14 @@ Func ShowPPMM()
 EndFunc   ;==>ShowPPMM
 
 Func ExitScript()
+	Local $nPressed = MsgBox($MB_OKCANCEL, "PPMM", "If exit the PPMM, current connection will be closed, really exit?")
+	If $nPressed = $IDOK Then
+		ProcessClose("mstsc.exe")
+		UpdateDesktopState($g_nConnectedIndex)
+	Else
+		Return
+	EndIf
+	AdlibUnRegister("OnBtnRefreshClicked")
 	GUIDelete($hGUI)
 	Exit
 EndFunc   ;==>ExitScript
