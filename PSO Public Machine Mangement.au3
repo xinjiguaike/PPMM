@@ -125,6 +125,11 @@ GUISetState(@SW_SHOW)
 SyncFromServer($PPMM_XML_PATH)
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+AdlibRegister("OnBtnRefreshClicked", 60000)
+
+>>>>>>> fcf24b453819edd4484c559c4363561fab7667c0
 =======
 AdlibRegister("OnBtnRefreshClicked", 60000)
 
